@@ -3,6 +3,7 @@ import scrapy, logging
 from scrapy.linkextractors import LinkExtractor
 from scrapy.spiders import CrawlSpider, Rule
 from jdbspider.items import jobItem
+from lxml import etree
 
 
 class SimplespiderSpider(CrawlSpider):
@@ -12,10 +13,11 @@ class SimplespiderSpider(CrawlSpider):
     user_agent = "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.1 (KHTML, like Gecko) Chrome/22.0.1207.1 Safari/537.1"
 
     def parse(self, response):
-        for a in response.css("a[target='_top']::attr(href)").getall():
+        for job_div in response.xpath("//div[@data-automation='job-title']").getall():
             job = jobItem()
-            job['title'] = a
-            yield response.follow(a, callback=self.parse_jobpage, meta={'job': job})
+            tree = etree.fromstring(job_div)
+            job['title'] = "".join(tree.xpath('//a/span/span//text()'))
+            yield response.follow(tree.xpath('//a/@href')[0], callback=self.parse_jobpage, meta={'job': job})
 
     def parse_jobpage(self, response):
         job = response.meta['job']
