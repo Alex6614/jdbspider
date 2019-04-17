@@ -2,6 +2,7 @@
 import scrapy, logging
 from scrapy.linkextractors import LinkExtractor
 from scrapy.spiders import CrawlSpider, Rule
+from jdbspider.items import jobItem
 
 
 class SimplespiderSpider(CrawlSpider):
@@ -12,9 +13,17 @@ class SimplespiderSpider(CrawlSpider):
 
     def parse(self, response):
         for a in response.css("a[target='_top']::attr(href)").getall():
-            yield response.follow(a, callback=self.parse_jobpage)
+            job = jobItem()
+            job['title'] = a
+            yield response.follow(a, callback=self.parse_jobpage, meta={'job': job})
 
     def parse_jobpage(self, response):
-        yield {
-            'Job Functions': response.xpath("//strong[text()='Job Functions']/parent::span").re(r'\/strong>: (.*)</span>')
-        }
+        job = response.meta['job']
+
+        #yield {
+        #    'Job Functions': response.xpath("//strong[text()='Job Functions']/parent::span").re(r'\/strong>: (.*)</span>')
+        #}
+
+        span_list = response.css("span::text").extract()
+        job['description'] = " ".join(span_list)
+        return job
